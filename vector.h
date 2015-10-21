@@ -71,14 +71,6 @@ public:
     os.write((char *) content, sizeof(T) * size);
   }
 
-  inline int find(T value) {
-    for(int i = 0; i < size; i++) {
-      if(content[i] == value)
-        return i;
-    }
-    return -1;
-  }
-
 //   inline void fill(const T &t) {
 //     T *s = content;
 //     for(int i = 0; i < size; i++) *(s++) = t;
@@ -123,6 +115,12 @@ public:
   inline T operator [] (int k) const {
     ASSERT(k >= 0 && k < size, "Index out of bound in Vector::operator [] const");
     return content[k];
+  }
+
+  inline T norme() const {
+    T s = 0;
+    for(int i = 0; i<size; i++) s += content[i] * content[i];
+    return sqrt(s);
   }
 
   inline void print(std::ostream &os) const {

@@ -20,39 +20,48 @@
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <opencv2/highgui/highgui.hpp>
 
 using namespace std;
 
-#include <libpng/png.h>
+//#include <libpng/png.h>
 
 #include "rgb_image.h"
 
 void RGBImage::allocate() {
+
   _bit_plans = new unsigned char **[RGB_DEPTH];
   _bit_lines = new unsigned char *[RGB_DEPTH * _height];
   _bit_map = new unsigned char [_width * _height * RGB_DEPTH];
   for(int k = 0; k < RGB_DEPTH; k++) _bit_plans[k] = _bit_lines + k * _height;
   for(int k = 0; k < RGB_DEPTH * _height; k++) _bit_lines[k] = _bit_map + k * _width;
+
 }
 
 void RGBImage::deallocate() {
+
   delete[] _bit_plans;
   delete[] _bit_lines;
   delete[] _bit_map;
+
 }
 
 RGBImage::RGBImage() : _bit_plans(0), _bit_lines(0), _bit_map(0) { }
 
 RGBImage::RGBImage(int width, int height) : _width(width), _height(height) {
+
   allocate();
   memset(_bit_map, 0, _width * _height * RGB_DEPTH * sizeof(unsigned char));
+
 }
 
 RGBImage::~RGBImage() {
   deallocate();
 }
 
-void RGBImage::write_ppm(const char *filename) {
+void RGBImage::write_ppm(char *filename) {
+
   FILE *outfile;
 
   if ((outfile = fopen (filename, "wb")) == 0) {
@@ -75,13 +84,17 @@ void RGBImage::write_ppm(const char *filename) {
   fclose(outfile);
 
   delete[] raw;
+
 }
 
-void RGBImage::read_ppm(const char *filename) {
+void RGBImage::read_ppm(char *filename) {
+
   const int buffer_size = 1024;
   FILE *infile;
   char buffer[buffer_size];
   int max;
+  char *res;
+  size_t res_size;
 
   deallocate();
 
@@ -90,21 +103,21 @@ void RGBImage::read_ppm(const char *filename) {
     exit(1);
   }
 
-  fgets(buffer, buffer_size, infile);
+  res = fgets(buffer, buffer_size, infile);
 
   if(strncmp(buffer, "P6", 2) == 0) {
 
     do {
-      fgets(buffer, buffer_size, infile);
+      res = fgets(buffer, buffer_size, infile);
     } while((buffer[0] < '0') || (buffer[0] > '9'));
     sscanf(buffer, "%d %d", &_width, &_height);
-    fgets(buffer, buffer_size, infile);
+    res = fgets(buffer, buffer_size, infile);
     sscanf(buffer, "%d", &max);
 
     allocate();
 
     unsigned char *raw = new unsigned char[_width * _height * RGB_DEPTH];
-    fread(raw, sizeof(unsigned char), _width * _height * RGB_DEPTH, infile);
+    res_size = fread(raw, sizeof(unsigned char), _width * _height * RGB_DEPTH, infile);
 
     int k = 0;
     for(int y = 0; y < _height; y++) for(int x = 0; x < _width; x++) {
@@ -118,16 +131,16 @@ void RGBImage::read_ppm(const char *filename) {
   } else if(strncmp(buffer, "P5", 2) == 0) {
 
     do {
-      fgets(buffer, buffer_size, infile);
+      res = fgets(buffer, buffer_size, infile);
     } while((buffer[0] < '0') || (buffer[0] > '9'));
     sscanf(buffer, "%d %d", &_width, &_height);
-    fgets(buffer, buffer_size, infile);
+    res = fgets(buffer, buffer_size, infile);
     sscanf(buffer, "%d", &max);
 
     allocate();
 
     unsigned char *pixbuf = new unsigned char[_width * _height];
-    fread(buffer, sizeof(unsigned char), _width * _height, infile);
+    res_size = fread(buffer, sizeof(unsigned char), _width * _height, infile);
 
     int k = 0, l = 0;
     for(int y = 0; y < _height; y++) for(int x = 0; x < _width; x++) {
@@ -143,14 +156,45 @@ void RGBImage::read_ppm(const char *filename) {
     cerr << "Can not read ppm of type [" << buffer << "] from " << filename << ".\n";
     exit(1);
   }
+
 }
 
-void RGBImage::read_png(const char* filename) {
+void RGBImage::read_opencv_mat(cv::Mat &frame) {
+	deallocate();
+	allocate();
+    int k=0;
+    for (int y = 0; y < _height; y++) {
+      for (int x = 0; x < _width; x++) {
+          _bit_plans[RED][y][x] = frame.data[k];
+          _bit_plans[GREEN][y][x] = frame.data[k];
+          _bit_plans[BLUE][y][x] = frame.data[k++];
+
+      }
+    }
+}
+
+void RGBImage::write_opencv_mat(char *filename) {
+	cv::Mat frame(_height, _width, CV_8UC3, cv::Scalar::all(0));
+    int k = 0;
+    for (int y = 0; y < _height; y++) {
+      for (int x = 0; x < _width; x++) {
+		frame.data[k++] = _bit_plans[RED][y][x];
+		frame.data[k++] = _bit_plans[GREEN][y][x];
+		frame.data[k++] = _bit_plans[BLUE][y][x];
+      }
+    }
+    cv::imshow(filename, frame);
+}
+
+/** soluzione 1, modificare solo il file rgb_image */
+void RGBImage::read_png(char* name) {
+/*
   // This is the number of bytes the read_png routine will read to
   // decide if the file is a PNG or not. According to the png
   // documentation, it can be 1 to 8 bytes, 8 being the max and the
   // best.
 
+  size_t res;
   const int header_size = 8;
 
   png_byte header[header_size];
@@ -159,16 +203,16 @@ void RGBImage::read_png(const char* filename) {
   deallocate();
 
   // open file
-  FILE *fp = fopen(filename, "rb");
+  FILE *fp = fopen(name, "rb");
   if (!fp) {
-    cerr << "Unable to open file " << filename << " for reading.\n";
+    cerr << "Unable to open file " << name << " for reading.\n";
     exit(1);
   }
 
   // read header
-  fread(header, 1, header_size, fp);
+  res = fread(header, 1, header_size, fp);
   if (png_sig_cmp(header, 0, header_size)) {
-    cerr << "File " << filename << " does not look like PNG.\n";
+    cerr << "File " << name << " does not look like PNG.\n";
     fclose(fp);
     exit(1);
   }
@@ -277,16 +321,18 @@ void RGBImage::read_png(const char* filename) {
   free(row_pointers);
 
   fclose(fp);
+*/
 }
 
-void RGBImage::write_png(const char *filename) {
+void RGBImage::write_png(char *name) {
+/*
   png_bytep *row_pointers;
 
   // create file
-  FILE *fp = fopen(filename, "wb");
+  FILE *fp = fopen(name, "wb");
 
   if (!fp) {
-    cerr << "Unable to create image '" << filename << "'\n";
+    cerr << "Unable to create image '" << name << "'\n";
     exit(1);
   }
 
@@ -338,4 +384,5 @@ void RGBImage::write_png(const char *filename) {
   free(row_pointers);
 
   fclose(fp);
+*/
 }

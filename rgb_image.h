@@ -20,6 +20,7 @@
 #ifndef RGB_IMAGE_H
 #define RGB_IMAGE_H
 
+#include "opencv2/core/core.hpp"
 #include "misc.h"
 
 using namespace std;
@@ -57,11 +58,14 @@ public:
     return _bit_plans[d][y][x];
   }
 
-  virtual void read_ppm(const char *filename);
-  virtual void write_ppm(const char *filename);
+  virtual void read_ppm(char *filename);
+  virtual void write_ppm(char *filename);
 
-  virtual void read_png(const char *filename);
-  virtual void write_png(const char *filename);
+  virtual void read_png(char *filename);
+  virtual void write_png(char *filename);
+
+  virtual void read_opencv_mat(cv::Mat &frame);
+  virtual void write_opencv_mat(char *filename);
 };
 
 #endif

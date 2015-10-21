@@ -15,7 +15,6 @@
 // Written by Francois Fleuret                                                  //
 // (C) Ecole Polytechnique Federale de Lausanne                                 //
 // Contact <pom@epfl.ch> for comments & bug reports                             //
-// Modified by Matej Smid <smidm@cmp.felk.cvut.cz>						              		//
 //////////////////////////////////////////////////////////////////////////////////
 
 #ifndef POM_SOLVER_H
@@ -25,23 +24,21 @@
 #include "integral_proba_view.h"
 #include "normal_law.h"
 #include "room.h"
-#include "vector.h"
 
 class POMSolver {
 
   // At each pixel the proba for the pixel to be off
 
-  Vector<ProbaView *> neg;
+  ProbaView neg;
 
   // At each pixel, 0 if the view is 0, and the proba for the pixel to
   // be off if the view is 1 (or, more mathematically: neg * view)
 
-  Vector<ProbaView *> neg_view;
+  ProbaView neg_view;
 
   // Integral images to speed-up computation
 
-  Vector<IntegralProbaView *> ii_neg;
-  Vector<IntegralProbaView *> ii_neg_view;
+  IntegralProbaView ii_neg, ii_neg_view;
 
   // Distribution of surface_difference / surface_synthetic
 
@@ -56,6 +53,7 @@ class POMSolver {
 
   void add_log_ratio(int camera,
                      Room *room,
+                     ProbaView *view,
                      Vector<scalar_t> *proba_absence,
                      Vector<scalar_t> *sum);
 
@@ -63,16 +61,13 @@ public:
 
   POMSolver(Room *room);
 
-  ~POMSolver();
-
   // Uses the computation above for the various cameras and the prior
-  // to refresh proba_absence. Iterates as many times as
-  // specified. The two last parameters are used only to save images
-  // showing the convergence
+  // to refresh proba_absence. Iterates as many times as specified.
 
   void solve(Room *room,
              Vector<scalar_t> *prior,
-             Vector<scalar_t> *result_proba_presence,
+             Vector<ProbaView *> *views,
+             Vector<scalar_t> *proba_presence,
              int nb_frame,
              char *convergence_file_format);
 };
